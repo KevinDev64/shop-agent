@@ -1,3 +1,4 @@
 token.txt
 .DS_Store
 bot_token.txt
+utils/openai_token.txt
