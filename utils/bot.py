@@ -134,7 +134,8 @@ def start_message(message):
     keyboard.row(zero_machine, first_machine)
     keyboard.row(second_machine, third_machine)
     keyboard.row(fourth_machine, fifth_machine)
-    bot.send_message(message.chat.id, "Main menu", reply_markup=keyboard)
+    bot.send_message(message.chat.id, "📂 Главное меню")
+    bot.send_message(message.chat.id, "📝 Выберите интересующий Вас товар или напишите его имя вручную", reply_markup=keyboard)
     
     try:
         cur.execute("INSERT INTO user VALUES (?, ?, ?);", (message.chat.id, "menu", 0))
@@ -149,20 +150,20 @@ def machine_description(message):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        back_to_menu_button = types.KeyboardButton(text="Назад в меню")
+        back_to_menu_button = types.KeyboardButton(text="🗃️ Назад в меню")
         keyboard.add(back_to_menu_button)
         
-        bot.send_message(message.chat.id, """Запрос принят. Ожидайте ответа...\nВы выбрали -> {}""".format(message.text))
+        bot.send_message(message.chat.id, """⚙️ Запрос принят. Ожидайте ответа...\nВы выбрали -> {}""".format(message.text))
         description = get_info(goods.index(message.text))
         bot.send_message(message.chat.id, description)
-        bot.send_message(message.chat.id, """Сейчас Вы можете задать вопросы об этом товаре или вернуться в главное меню.""", reply_markup=keyboard)
+        bot.send_message(message.chat.id, """🔎 Сейчас Вы можете задать вопросы об этом товаре или вернуться в главное меню.""", reply_markup=keyboard)
         # change user status in db
         cur.execute("UPDATE user SET status = ?, itemID = ?  WHERE userID = ?;", ("chat", 
                                                                                  goods.index(message.text), 
                                                                                  message.chat.id))
         conn.commit()
     else:
-        bot.send_message(message.chat.id, "Запрос отклонён. Такого товара не существует!")
+        bot.send_message(message.chat.id, "❌ Запрос отклонён. Такого товара не существует!")
 
 @bot.message_handler(content_types="text", func= lambda message: check_step("chat", message.chat.id))
 def chat_with_ai(message):
@@ -170,11 +171,11 @@ def chat_with_ai(message):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-    back_to_menu_button = types.KeyboardButton(text="Назад в меню")
+    back_to_menu_button = types.KeyboardButton(text="🗃️ Назад в меню")
     keyboard.add(back_to_menu_button)
     
     if message.text == back_to_menu_button.text:
-        bot.send_message(message.chat.id, "Возврат в главное меню")
+        bot.send_message(message.chat.id, "⛓️ Возврат в главное меню")
         cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("menu", message.chat.id))
         conn.commit()
         
@@ -192,8 +193,8 @@ def chat_with_ai(message):
         keyboard.row(zero_machine, first_machine)
         keyboard.row(second_machine, third_machine)
         keyboard.row(fourth_machine, fifth_machine)
-        bot.send_message(message.chat.id, "Главное меню", reply_markup=keyboard)
-        
+        bot.send_message(message.chat.id, "📂 Главное меню")
+        bot.send_message(message.chat.id, "📝 Выберите интересующий Вас товар или напишите его имя вручную", reply_markup=keyboard) 
     else:
         itemID = get_itemID(message.chat.id)
         answer = get_answer(itemID, message.text)
