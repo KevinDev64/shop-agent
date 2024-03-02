@@ -36,6 +36,9 @@ os.environ["OPENAI_API_KEY"] = token
 
 docs_k = 65 # const
 number_of_goods = 6 # const
+goods = ["Philips EP2231/40", "Nivona CafeRomatica NICR 550", # list of goods
+        "Delonghi ECAM 370.70.B", "Polaris PACM 2065AC", 
+        "Philips EP2030/10", "REDMOND RCM-1517"] 
 langchain.debug = False # debug is off
 
 # read the vector databases
@@ -48,15 +51,15 @@ for vectordb in vectordb_list:
     print(vectordb._collection.count())
     
 def get_info(itemID):
-    question = "Расскажи про эту кофемашину"
-    template = """Ты - полезный ИИ консультант для нашего магазина бытовой техники по продаже кофемашин.
-        Твое задание - описать данную кофемашину. Говори только о достоинствах.
-        Используйте следующие фрагменты контекста (Context), чтобы ответить на вопрос в конце (Question).
-        Если вы не знаете ответа, просто скажите, что не знаете, не пытайтесь придумывать ответ.
-        Сначала убедитесь, что прикрепленный текст имеет отношение к вопросу.
-        Если вопрос не имеет отшения к тексту, ответьте, что вы не можете ответить на данный вопрос.
-        Используйте максимум 15 предложений. 
-        Дайте ответ как можно более понятным, рассказывая кратко про все достинства именно данной кофемашины.
+    question = "Tell us about this coffee machine"
+    template = """You are a useful AI consultant for our household appliances store selling coffee machines.
+           Your task is to describe this coffee machine. Talk only about the merits.
+           Use the following pieces of context (Context) to answer the question (Question) at the end.
+           If you don't know the answer, just say you don't know, don't try to make up an answer.
+           First, make sure the attached text is relevant to the question.
+           If the question does not relate to the text, answer that you cannot answer this question.
+           Use a maximum of 15 sentences.
+           Give your answer as clearly as possible, briefly describing all the advantages of this particular coffee machine.
         Context: {context}
         Question: {question}""" 
     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
@@ -76,14 +79,14 @@ def get_info(itemID):
     return result["result"]
 
 def get_answer(itemID, question):
-    template = """Ты - полезный ИИ консультант для нашего магазина бытовой техники по продаже кофемашин.
-        Твое задание - понятно ответить на вопрос покупателя. 
-        Используйте следующие фрагменты контекста (Context), чтобы ответить на вопрос в конце (Question).
-        Если вы не знаете ответа, просто скажите, что не знаете, не пытайтесь придумывать ответ.
-        Сначала убедитесь, что прикрепленный текст имеет отношение к вопросу.
-        Если вопрос не имеет отшения к тексту, ответьте, что вы не можете ответить на данный вопрос.
-        Используйте максимум 15 предложений. 
-        Дайте ответ как можно более понятным. Говорите грамотно.
+    template = """You are a useful AI consultant for our household appliances store selling coffee machines.
+           Your task is to clearly answer the buyer's question.
+           Use the following pieces of context (Context) to answer the question (Question) at the end.
+           If you don't know the answer, just say you don't know, don't try to make up an answer.
+           First, make sure the attached text is relevant to the question.
+           If the question does not relate to the text, answer that you cannot answer this question.
+           Use a maximum of 15 sentences.
+           Make your answer as clear as possible. Speak competently.
         Context: {context}
         Question: {question}""" 
     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
@@ -101,6 +104,7 @@ def get_answer(itemID, question):
         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT})
     result = qa_chain({"query": question})
     return result["result"]
+
 def check_step(step, id): 
     cur.execute("SELECT status FROM user WHERE userID = ?", (id,))
     fetch_result = cur.fetchone()
@@ -108,10 +112,13 @@ def check_step(step, id):
         return True
     else:
         return False
-        
-print("Init bot decorators")
+    
+def get_itemID(userID):
+    cur.execute("SELECT itemID FROM user WHERE userID = ?", (userID,))
+    fetch_result = cur.fetchone()
+    return fetch_result[0]
 
-@bot.message_handler(commands=["start", "старт", "начать"])
+@bot.message_handler(commands=["start"])
 def start_message(message):
     keyboard = types.ReplyKeyboardMarkup(
         resize_keyboard = True,
@@ -132,11 +139,65 @@ def start_message(message):
     try:
         cur.execute("INSERT INTO user VALUES (?, ?, ?);", (message.chat.id, "menu", 0))
     except:
-        cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("chat", message.chat.id))
+        cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("menu", message.chat.id))
     conn.commit()
     
-@bot.message_handler(content_types="text", func=lambda message: message.text == "Philips EP2231/40" and check_step("menu", message.chat.id)) 
-def zero_machine(message):
-    pass
+@bot.message_handler(content_types="text", func=lambda message: check_step("menu", message.chat.id)) 
+def machine_description(message):
+    if message.text in goods:
+        keyboard = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        back_to_menu_button = types.KeyboardButton(text="Back to Menu")
+        keyboard.add(back_to_menu_button)
+        
+        bot.send_message(message.chat.id, """Request accepted. Wait for a response...\nYou selected -> {}""".format(message.text))
+        description = get_info(goods.index(message.text))
+        bot.send_message(message.chat.id, description)
+        bot.send_message(message.chat.id, """You can now ask questions about this product or return to the main menu to view another one.""", reply_markup=keyboard)
+        # change user status in db
+        cur.execute("UPDATE user SET status = ?, itemID = ?  WHERE userID = ?;", ("chat", 
+                                                                                 goods.index(message.text), 
+                                                                                 message.chat.id))
+        conn.commit()
+    else:
+        bot.send_message(message.chat.id, "Request rejected. You entered wrong product name!")
+
+@bot.message_handler(content_types="text", func= lambda message: check_step("chat", message.chat.id))
+def chat_with_ai(message):
+    keyboard = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+    back_to_menu_button = types.KeyboardButton(text="Back to Menu")
+    keyboard.add(back_to_menu_button)
     
-bot.polling() 
+    if message.text == back_to_menu_button.text:
+        bot.send_message(message.chat.id, "Returning back to Menu")
+        cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("menu", message.chat.id))
+        conn.commit()
+        
+        keyboard = types.ReplyKeyboardMarkup(
+        resize_keyboard = True,
+        one_time_keyboard=True
+        )
+        zero_machine = types.KeyboardButton(text="Philips EP2231/40")
+        first_machine = types.KeyboardButton(text="Nivona CafeRomatica NICR 550")
+        second_machine = types.KeyboardButton(text="Delonghi ECAM 370.70.B")
+        third_machine = types.KeyboardButton(text="Polaris PACM 2065AC")
+        fourth_machine = types.KeyboardButton(text="Philips EP2030/10")
+        fifth_machine = types.KeyboardButton(text="REDMOND RCM-1517")
+        
+        keyboard.row(zero_machine, first_machine)
+        keyboard.row(second_machine, third_machine)
+        keyboard.row(fourth_machine, fifth_machine)
+        bot.send_message(message.chat.id, "Main menu", reply_markup=keyboard)
+        
+    else:
+        itemID = get_itemID(message.chat.id)
+        answer = get_answer(itemID, message.text)
+        bot.send_message(message.chat.id, answer, reply_markup=keyboard)
+        
+        
+bot.infinity_polling(timeout=10, long_polling_timeout = 5)
