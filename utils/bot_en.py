@@ -51,17 +51,17 @@ for vectordb in vectordb_list:
     print(vectordb._collection.count())
     
 def get_info(itemID):
-    question = "Расскажи об этой кофемашине"
-    template = """Ты - полезный ИИ консультант для нашего магазина бытовой техники по продаже кофемашин.
-        Твое задание - описать данную кофемашину. Говори только о достоинствах.
-        Используйте следующие фрагменты контекста (Context), чтобы ответить на вопрос в конце (Question).
-        Если вы не знаете ответа, просто скажите, что не знаете, не пытайтесь придумывать ответ.
-        Сначала убедитесь, что прикрепленный текст имеет отношение к вопросу.
-        Если вопрос не имеет отшения к тексту, ответьте, что вы не можете ответить на данный вопрос.
-        Используйте максимум 15 предложений. 
-        Дайте ответ как можно более понятным, рассказывая кратко про все достинства именно данной кофемашины.
+    question = "Tell us about this coffee machine"
+    template = """You are a useful AI consultant for our household appliances store selling coffee machines.
+           Your task is to describe this coffee machine. Talk only about the merits.
+           Use the following pieces of context (Context) to answer the question (Question) at the end.
+           If you don't know the answer, just say you don't know, don't try to make up an answer.
+           First, make sure the attached text is relevant to the question.
+           If the question does not relate to the text, answer that you cannot answer this question.
+           Use a maximum of 15 sentences.
+           Give your answer as clearly as possible, briefly describing all the advantages of this particular coffee machine.
         Context: {context}
-        Question: {question}"""
+        Question: {question}""" 
     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
     
     vectordb = vectordb_list[itemID]
@@ -79,16 +79,16 @@ def get_info(itemID):
     return result["result"]
 
 def get_answer(itemID, question):
-    template = """Ты - полезный ИИ консультант для нашего магазина бытовой техники по продаже кофемашин.
-        Твое задание - понятно ответить на вопрос покупателя. 
-        Используйте следующие фрагменты контекста (Context), чтобы ответить на вопрос в конце (Question).
-        Если вы не знаете ответа, просто скажите, что не знаете, не пытайтесь придумывать ответ.
-        Сначала убедитесь, что прикрепленный текст имеет отношение к вопросу.
-        Если вопрос не имеет отшения к тексту, ответьте, что вы не можете ответить на данный вопрос.
-        Используйте максимум 15 предложений. 
-        Дайте ответ как можно более понятным. Говорите грамотно.
+    template = """You are a useful AI consultant for our household appliances store selling coffee machines.
+           Your task is to clearly answer the buyer's question.
+           Use the following pieces of context (Context) to answer the question (Question) at the end.
+           If you don't know the answer, just say you don't know, don't try to make up an answer.
+           First, make sure the attached text is relevant to the question.
+           If the question does not relate to the text, answer that you cannot answer this question.
+           Use a maximum of 15 sentences.
+           Make your answer as clear as possible. Speak competently.
         Context: {context}
-        Question: {question}"""
+        Question: {question}""" 
     QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
     
     vectordb = vectordb_list[itemID]
@@ -149,20 +149,20 @@ def machine_description(message):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        back_to_menu_button = types.KeyboardButton(text="Назад в меню")
+        back_to_menu_button = types.KeyboardButton(text="Back to Menu")
         keyboard.add(back_to_menu_button)
         
-        bot.send_message(message.chat.id, """Запрос принят. Ожидайте ответа...\nВы выбрали -> {}""".format(message.text))
+        bot.send_message(message.chat.id, """Request accepted. Wait for a response...\nYou selected -> {}""".format(message.text))
         description = get_info(goods.index(message.text))
         bot.send_message(message.chat.id, description)
-        bot.send_message(message.chat.id, """Сейчас Вы можете задать вопросы об этом товаре или вернуться в главное меню.""", reply_markup=keyboard)
+        bot.send_message(message.chat.id, """You can now ask questions about this product or return to the main menu to view another one.""", reply_markup=keyboard)
         # change user status in db
         cur.execute("UPDATE user SET status = ?, itemID = ?  WHERE userID = ?;", ("chat", 
                                                                                  goods.index(message.text), 
                                                                                  message.chat.id))
         conn.commit()
     else:
-        bot.send_message(message.chat.id, "Запрос отклонён. Такого товара не существует!")
+        bot.send_message(message.chat.id, "Request rejected. You entered wrong product name!")
 
 @bot.message_handler(content_types="text", func= lambda message: check_step("chat", message.chat.id))
 def chat_with_ai(message):
@@ -170,11 +170,11 @@ def chat_with_ai(message):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-    back_to_menu_button = types.KeyboardButton(text="Назад в меню")
+    back_to_menu_button = types.KeyboardButton(text="Back to Menu")
     keyboard.add(back_to_menu_button)
     
     if message.text == back_to_menu_button.text:
-        bot.send_message(message.chat.id, "Возврат в главное меню")
+        bot.send_message(message.chat.id, "Returning back to Menu")
         cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("menu", message.chat.id))
         conn.commit()
         
@@ -192,7 +192,7 @@ def chat_with_ai(message):
         keyboard.row(zero_machine, first_machine)
         keyboard.row(second_machine, third_machine)
         keyboard.row(fourth_machine, fifth_machine)
-        bot.send_message(message.chat.id, "Главное меню", reply_markup=keyboard)
+        bot.send_message(message.chat.id, "Main menu", reply_markup=keyboard)
         
     else:
         itemID = get_itemID(message.chat.id)
