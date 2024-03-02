@@ -1,5 +1,6 @@
 # import modules
 
+import telebot
 from telebot import *
 import logging
 import sqlite3
@@ -23,9 +24,9 @@ logging.basicConfig(level=logging.INFO, filename="../info.log", filemode='w')
 
 # init a bot with token from file
 bot_token_file = open("bot_token.txt", "r")
-bot_token = bot_token_file.readline()
+API_KEY = bot_token_file.readline()
 bot_token_file.close()
-bot = telebot.TeleBot(bot_token)
+bot = telebot.TeleBot("7174085128:AAGfMlZh5wUoV3vXfoGOYtb9vkN3SbqOmAE")
 
 # set the openai token
 token_file = open("openai_token.txt", "r")
@@ -100,3 +101,42 @@ def get_answer(itemID, question):
         chain_type_kwargs={"prompt": QA_CHAIN_PROMPT})
     result = qa_chain({"query": question})
     return result["result"]
+def check_step(step, id): 
+    cur.execute("SELECT status FROM user WHERE userID = ?", (id,))
+    fetch_result = cur.fetchone()
+    if step in fetch_result:
+        return True
+    else:
+        return False
+        
+print("Init bot decorators")
+
+@bot.message_handler(commands=["start", "старт", "начать"])
+def start_message(message):
+    keyboard = types.ReplyKeyboardMarkup(
+        resize_keyboard = True,
+        one_time_keyboard=True
+    )
+    zero_machine = types.KeyboardButton(text="Philips EP2231/40")
+    first_machine = types.KeyboardButton(text="Nivona CafeRomatica NICR 550")
+    second_machine = types.KeyboardButton(text="Delonghi ECAM 370.70.B")
+    third_machine = types.KeyboardButton(text="Polaris PACM 2065AC")
+    fourth_machine = types.KeyboardButton(text="Philips EP2030/10")
+    fifth_machine = types.KeyboardButton(text="REDMOND RCM-1517")
+    
+    keyboard.row(zero_machine, first_machine)
+    keyboard.row(second_machine, third_machine)
+    keyboard.row(fourth_machine, fifth_machine)
+    bot.send_message(message.chat.id, "Main menu", reply_markup=keyboard)
+    
+    try:
+        cur.execute("INSERT INTO user VALUES (?, ?, ?);", (message.chat.id, "menu", 0))
+    except:
+        cur.execute("UPDATE user SET status = ? WHERE userID = ?;", ("chat", message.chat.id))
+    conn.commit()
+    
+@bot.message_handler(content_types="text", func=lambda message: message.text == "Philips EP2231/40" and check_step("menu", message.chat.id)) 
+def zero_machine(message):
+    pass
+    
+bot.polling() 
