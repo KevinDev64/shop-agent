@@ -108,7 +108,9 @@ def get_answer(itemID, question):
 def check_step(step, id): 
     cur.execute("SELECT status FROM user WHERE userID = ?", (id,))
     fetch_result = cur.fetchone()
-    if step in fetch_result:
+    if fetch_result == None:
+        return False
+    elif step in fetch_result:
         return True
     else:
         return False
