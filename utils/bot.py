@@ -26,7 +26,8 @@ logging.basicConfig(level=logging.INFO, filename="../info.log", filemode='w')
 bot_token_file = open("bot_token.txt", "r")
 API_KEY = bot_token_file.readline()
 bot_token_file.close()
-bot = telebot.TeleBot("7174085128:AAGfMlZh5wUoV3vXfoGOYtb9vkN3SbqOmAE")
+os.environ["API_KEY"] = API_KEY
+bot = telebot.TeleBot(API_KEY)
 
 # set the openai token
 token_file = open("openai_token.txt", "r")
