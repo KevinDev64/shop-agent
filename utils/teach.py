@@ -13,7 +13,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 import warnings
 
-token_file = open("token.txt", "r")
+token_file = open("openai_token.txt", "r")
 token = token_file.readline()
 token_file.close()
 
