@@ -14,33 +14,35 @@ from langchain.vectorstores import Chroma
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
+import configparser
+
+config = configparser.ConfigParser()
+config.read("../settings.ini") # read configuration file
+try:
+    enable_logging = bool(config["main"]["logging"])
+    number_of_goods = int(config["main"]["number_of_goods"])
+    docs_k = int(config["openai"]["docs_k"])
+    os.environ["OPENAI_API_KEY"] = config["openai"]["api_key"]
+    API_KEY = config["telegram"]["token"]
+except:
+    raise Exception("Bad configuration file!")
 
 # connect to the database
-conn = sqlite3.connect(r"main.db", check_same_thread=False)
+conn = sqlite3.connect("main.db", check_same_thread=False)
 cur = conn.cursor()
 
-# start logging
-logging.basicConfig(level=logging.INFO, filename="../info.log", filemode='w')
+if enable_logging:
+    logging.basicConfig(level=logging.INFO, filename="../info.log", filemode='w')
+else:
+    print("Logging is disabled!")
 
-# init a bot with token from file
-bot_token_file = open("bot_token.txt", "r")
-API_KEY = bot_token_file.readline()
-bot_token_file.close()
-os.environ["API_KEY"] = API_KEY
+# Turned off langchain debug
+langchain.debug = False
+
 bot = telebot.TeleBot(API_KEY)
-
-# set the openai token
-token_file = open("openai_token.txt", "r")
-token = token_file.readline()
-token_file.close()
-os.environ["OPENAI_API_KEY"] = token
-
-docs_k = 65 # const
-number_of_goods = 6 # const
 goods = ["Philips EP2231/40", "Nivona CafeRomatica NICR 550", # list of goods
         "Delonghi ECAM 370.70.B", "Polaris PACM 2065AC", 
-        "Philips EP2030/10", "REDMOND RCM-1517"] 
-langchain.debug = False # debug is off
+        "Philips EP2030/10", "REDMOND RCM-1517"] # TODO: move to special file
 
 # read the vector databases
 vectordb_list = []
